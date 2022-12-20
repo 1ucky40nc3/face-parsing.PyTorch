@@ -100,7 +100,7 @@ def mask_image_with_maps(image: Image, anno: np.ndarray, stride: int = 1) -> Lis
         masked_image = np.where(mask, np.ones_like(image), image)
         if masked_image.shape[0] > 0:
             masked_image = cv2.cvtColor(masked_image, cv2.COLOR_BGR2RGB)
-            masked_images.append(masked_image)
+            masked_images.append((i, masked_image))
 
     return masked_images
 
@@ -146,8 +146,8 @@ def visualize_anno(
     
     if do_mask_image_with_maps:
         masked_images = mask_image_with_maps(image, anno, stride)
-        for image in masked_images:
-            image_path = os.path.join(output_dir, f"{filename}-mask.jpg")
+        for i, image in masked_images:
+            image_path = os.path.join(output_dir, f"{filename}-mask-{i}.jpg")
             save_image(image_path, image)
     
     if do_mask_image_face:
