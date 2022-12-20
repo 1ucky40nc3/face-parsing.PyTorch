@@ -172,7 +172,7 @@ def eval_transforms() -> T.Compose:
 
 def load_image(path: str) -> Image:
     image = Image.open(path)
-    image = image.resize((512, 512), image.BILINEAR)
+    image = image.resize((512, 512), Image.BILINEAR)
     return image
 
 
