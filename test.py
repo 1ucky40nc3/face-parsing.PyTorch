@@ -2,6 +2,7 @@
 # -*- encoding: utf-8 -*-
 import os
 import os.path as osp
+import argparse
 
 import numpy as np
 
@@ -23,23 +24,23 @@ def vis_parsing_maps(
 ):
     # Colors for all 20 parts
     part_colors = [
-        [255, 0, 0],    # skin
-        [255, 85, 0],   # left brow
+        [255, 0, 0],  # skin
+        [255, 85, 0],  # left brow
         [255, 170, 0],  # right brow
-        [255, 0, 85],   # left eye
+        [255, 0, 85],  # left eye
         [255, 0, 170],  # right eye
-        [0, 255, 0],    # glasses
-        [85, 255, 0],   # left ear
+        [0, 255, 0],  # glasses
+        [85, 255, 0],  # left ear
         [170, 255, 0],  # right ear
-        [0, 255, 85],   # ear rings
+        [0, 255, 85],  # ear rings
         [0, 255, 170],  # nose
-        [0, 0, 255],    # mouth
-        [85, 0, 255],   # upper lip
+        [0, 0, 255],  # mouth
+        [85, 0, 255],  # upper lip
         [170, 0, 255],  # lower lip
-        [0, 85, 255],   # neck
+        [0, 85, 255],  # neck
         [0, 170, 255],  # cloth
         [255, 255, 0],  # hair
-        [255, 255, 85], # hat
+        [255, 255, 85],  # hat
         [255, 255, 170],
         [255, 0, 255],
         [255, 85, 255],
@@ -118,5 +119,26 @@ def evaluate(respth="./res/test_res", dspth="./data", cp="model_final_diss.pth")
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dspth",
+        default="test-img/",
+        type=str,
+        help="The path to a directory with test images.",
+    )
+    parser.add_argument(
+        "--respth",
+        default="res/test_res/",
+        type=str,
+        help="The output directory for generated images."
+    )
+    parser.add_argument(
+        "--cp",
+        default="79999_iter.pth",
+        type=str,
+        help="The path to a model checkpoint",
+    )
 
-    evaluate(dspth="/home/zll/data/CelebAMask-HQ/test-img", cp="79999_iter.pth")
+    args = parser.parse_args()
+
+    evaluate(**vars(args))
