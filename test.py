@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
+from typing import Any
+
 import os
 import os.path as osp
 import argparse
@@ -15,6 +17,64 @@ import torchvision.transforms as transforms
 from model import BiSeNet
 
 
+# Colors for all 20 parts
+PART_COLORS = [
+    [255, 0, 0],  # skin
+    [255, 85, 0],  # left brow
+    [255, 170, 0],  # right brow
+    [255, 0, 85],  # left eye
+    [255, 0, 170],  # right eye
+    [0, 255, 0],  # glasses
+    [85, 255, 0],  # left ear
+    [170, 255, 0],  # right ear
+    [0, 255, 85],  # ear rings
+    [0, 255, 170],  # nose
+    [0, 0, 255],  # mouth
+    [85, 0, 255],  # upper lip
+    [170, 0, 255],  # lower lip
+    [0, 85, 255],  # neck
+    [0, 170, 255],  # cloth
+    [255, 255, 0],  # hair
+    [255, 255, 85],  # hat
+    [255, 255, 170],
+    [255, 0, 255],
+    [255, 85, 255],
+    [255, 170, 255],
+    [0, 255, 255],
+    [85, 255, 255],
+    [170, 255, 255],
+]
+
+
+def overlay_maps_on_im(im: Image, anno: np.ndarray, stride: int) -> Any:
+    im = np.array(im).copy().astype(np.uint8)
+    anno = anno.copy().astype(np.uint8)
+    anno = cv2.resize(
+        anno,
+        None,
+        fx=stride,
+        fy=stride,
+        interpolation=cv2.INTER_NEAREST,
+    )
+    anno_color = (
+        np.zeros((anno.shape[0], anno.shape[1], 3))
+        + 255
+    )
+
+    n_classes = np.max(anno)
+
+    for pi in range(1, n_classes + 1):
+        index = np.where(anno == pi)
+        anno_color[index[0], index[1], :] = PART_COLORS[pi]
+
+    anno_color = anno_color.astype(np.uint8)
+    im = cv2.addWeighted(
+        cv2.cvtColor(im, cv2.COLOR_RGB2BGR), 0.4, anno_color, 0.6, 0
+    )
+
+    return im
+
+
 def vis_parsing_maps(
     im: Image,
     parsing_anno: np.ndarray,
@@ -22,60 +82,11 @@ def vis_parsing_maps(
     save_im: bool = False,
     save_path: str = "vis_results/parsing_map_on_im.jpg",
 ) -> None:
-    # Colors for all 20 parts
-    part_colors = [
-        [255, 0, 0],  # skin
-        [255, 85, 0],  # left brow
-        [255, 170, 0],  # right brow
-        [255, 0, 85],  # left eye
-        [255, 0, 170],  # right eye
-        [0, 255, 0],  # glasses
-        [85, 255, 0],  # left ear
-        [170, 255, 0],  # right ear
-        [0, 255, 85],  # ear rings
-        [0, 255, 170],  # nose
-        [0, 0, 255],  # mouth
-        [85, 0, 255],  # upper lip
-        [170, 0, 255],  # lower lip
-        [0, 85, 255],  # neck
-        [0, 170, 255],  # cloth
-        [255, 255, 0],  # hair
-        [255, 255, 85],  # hat
-        [255, 255, 170],
-        [255, 0, 255],
-        [255, 85, 255],
-        [255, 170, 255],
-        [0, 255, 255],
-        [85, 255, 255],
-        [170, 255, 255],
-    ]
-
-    im = np.array(im)
-    vis_im = im.copy().astype(np.uint8)
-    vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
-    vis_parsing_anno = cv2.resize(
-        vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST
-    )
-    vis_parsing_anno_color = (
-        np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1], 3)) + 255
-    )
-
-    num_of_class = np.max(vis_parsing_anno)
-
-    for pi in range(1, num_of_class + 1):
-        index = np.where(vis_parsing_anno == pi)
-        vis_parsing_anno_color[index[0], index[1], :] = part_colors[pi]
-
-    vis_parsing_anno_color = vis_parsing_anno_color.astype(np.uint8)
-    # print(vis_parsing_anno_color.shape, vis_im.shape)
-    vis_im = cv2.addWeighted(
-        cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0
-    )
+    overlayed_on_im = overlay_maps_on_im(im, parsing_anno, stride)
 
     # Save result or not
     if save_im:
-        cv2.imwrite(save_path[:-4] + ".png", vis_parsing_anno)
-        cv2.imwrite(save_path, vis_im, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
+        cv2.imwrite(save_path, overlayed_on_im, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
 
 def evaluate(
