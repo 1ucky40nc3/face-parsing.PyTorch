@@ -158,15 +158,14 @@ def evaluate(
     respth: str = "./res/test_res",
     dspth: str = "./data",
     cp: str = "model_final_diss.pth",
-):
+) -> None:
     if not os.path.exists(respth):
         os.makedirs(respth)
 
     n_classes = 19
     net = BiSeNet(n_classes=n_classes)
     net.cuda()
-    save_pth = os.path.join("res/cp", cp)
-    net.load_state_dict(torch.load(save_pth))
+    net.load_state_dict(torch.load(cp))
     net.eval()
 
     transform = eval_transform()
@@ -206,7 +205,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--cp",
-        default="79999_iter.pth",
+        default="res/cp/79999_iter.pth",
         type=str,
         help="The path to a model checkpoint",
     )
