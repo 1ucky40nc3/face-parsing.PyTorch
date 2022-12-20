@@ -157,7 +157,7 @@ def visualize_anno(
     
     if do_mask_image_custom:
         face_image = mask_image_custom(image, anno, map_ids, stride)
-        face_path = os.path.join(output_dir, f"{filename}-face.jpg")
+        face_path = os.path.join(output_dir, f"{filename}-custom.jpg")
         save_image(face_path, face_image)
 
 
