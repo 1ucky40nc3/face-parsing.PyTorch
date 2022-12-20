@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
-from typing import Any, List
+from typing import Any, List, Optional
 
 import os
 import argparse
@@ -45,6 +45,13 @@ PART_COLORS = [
 ]
 
 
+FACE_CLASSES = [1, 2, 3, 4, 4, 5, 6, 10, 11, 12, 13]
+
+
+def save_image(path: str, image: Any) -> None:
+    cv2.imagewrite(path, image, [int(cv2.imageWRITE_JPEG_QUALITY), 100])
+
+
 def overlay_maps_on_image(image: Image, anno: np.ndarray, stride: int) -> Any:
     image = np.array(image).copy().astype(np.uint8)
     anno = anno.copy().astype(np.uint8)
@@ -74,7 +81,7 @@ def overlay_maps_on_image(image: Image, anno: np.ndarray, stride: int) -> Any:
     return image
 
 
-def mask_image_with_maps(image: Image, anno: np.ndarray, stride: int) -> List[Any]:
+def mask_image_with_maps(image: Image, anno: np.ndarray, stride: int = 1) -> List[Any]:
     image = np.array(image).copy().astype(np.uint8)
     anno = anno.copy().astype(np.uint8)
     anno = cv2.resize(
@@ -98,7 +105,7 @@ def mask_image_with_maps(image: Image, anno: np.ndarray, stride: int) -> List[An
     return masked_images
 
 
-def mask_image_face(image: Image, anno: np.ndarray, stride: int) -> Any:
+def mask_image_custom(image: Image, anno: np.ndarray, classes: List[int], stride: int = 1) -> Any:
     image = np.array(image).copy().astype(np.uint8)
     anno = anno.copy().astype(np.uint8)
     anno = cv2.resize(
@@ -109,8 +116,7 @@ def mask_image_face(image: Image, anno: np.ndarray, stride: int) -> Any:
         interpolation=cv2.INTER_NEAREST,
     )
 
-    face_classes = [1, 2, 3, 4, 4, 5, 6, 10, 11, 12, 13]
-    mask = [anno[:, :, np.newaxis] == i for i in face_classes]
+    mask = [anno[:, :, np.newaxis] == i for i in classes]
     mask = np.logical_or.reduce(mask)
     mask = np.invert(mask)
     masked_image = np.where(mask, np.ones_like(image), image)
@@ -119,30 +125,40 @@ def mask_image_face(image: Image, anno: np.ndarray, stride: int) -> Any:
     return masked_image
 
 
-def vis_parsing_maps(
+def visualize_anno(
     image: Image,
     anno: np.ndarray,
-    stride: int,
-    save_image: bool = False,
-    save_path: str = "vis_results/parsing_map_on_image.jpg",
+    output_dir: str,
+    filename: str,
+    stride: int = 1,
+    do_overlay_maps_on_image: bool = False,
+    do_mask_image_with_maps: bool = False,
+    do_mask_image_face: bool = False,
+    do_mask_image_custom: bool = False,
+    map_ids: Optional[List[int]] = None
 ) -> None:
-    overlayed_on_image = overlay_maps_on_image(image, anno, stride)
-    masked_images = mask_image_with_maps(image, anno, stride)
-    face_image = mask_image_face(image, anno, stride)
+    filename, _ = os.path.splitext(filename)
 
-    # Save result or not
-    if save_image:
-        path, filename = os.path.split(save_path)
-        filename, _ = os.path.splitext(filename)
-
-        cv2.imagewrite(save_path, overlayed_on_image, [int(cv2.imageWRITE_JPEG_QUALITY), 100])
-        
+    if do_overlay_maps_on_image:
+        overlayed_on_image = overlay_maps_on_image(image, anno, stride)
+        save_path = os.path.join(output_dir, f"{filename}.jpg")
+        save_image(save_path, overlayed_on_image)
+    
+    if do_mask_image_with_maps:
+        masked_images = mask_image_with_maps(image, anno, stride)
         for image in masked_images:
-            image_path = os.path.join(path, f"{filename}-mask.jpg")
-            cv2.imagewrite(image_path, image, [int(cv2.imageWRITE_JPEG_QUALITY), 100])
-        
-        face_path = os.path.join(path, f"{filename}-face.jpg")
-        cv2.imagewrite(face_path, face_image, [int(cv2.imageWRITE_JPEG_QUALITY), 100])
+            image_path = os.path.join(output_dir, f"{filename}-mask.jpg")
+            save_image(image_path, image)
+    
+    if do_mask_image_face:
+        face_image = mask_image_custom(image, anno, FACE_CLASSES, stride)
+        face_path = os.path.join(output_dir, f"{filename}-face.jpg")
+        save_image(face_path, face_image)
+    
+    if do_mask_image_custom:
+        face_image = mask_image_custom(image, anno, map_ids, stride)
+        face_path = os.path.join(output_dir, f"{filename}-face.jpg")
+        save_image(face_path, face_image)
 
 
 def eval_transform() -> transforms.Compose():
@@ -164,6 +180,11 @@ def evaluate(
     output_dir: str = "./res/test_res",
     input_dir: str = "./data",
     checkpoint: str = "model_final_diss.pth",
+    do_overlay_maps_on_image: bool = False,
+    do_mask_image_with_maps: bool = False,
+    do_mask_image_face: bool = False,
+    do_mask_image_custom: bool = False,
+    map_ids: Optional[List[int]] = None
 ) -> None:
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -186,12 +207,16 @@ def evaluate(
             out = net(image)[0]
             anno = out.squeeze(0).cpu().numpy().argmax(0)
 
-            vis_parsing_maps(
+            visualize_anno(
                 image,
                 anno,
-                stride=1,
-                save_image=True,
-                save_path=os.path.join(output_dir, path),
+                output_dir=output_dir,
+                filename=f,
+                do_overlay_maps_on_image=do_overlay_maps_on_image,
+                do_mask_image_with_maps=do_mask_image_with_maps,
+                do_mask_image_face=do_mask_image_face,
+                do_mask_image_custom=do_mask_image_custom,
+                map_ids=map_ids
             )
 
 
@@ -201,13 +226,13 @@ if __name__ == "__main__":
         "--input_dir",
         default="test-img/",
         type=str,
-        help="The path to a directory with test imageages.",
+        help="The path to a directory with test images.",
     )
     parser.add_argument(
         "--output_dir",
         default="res/test_res/",
         type=str,
-        help="The output directory for generated imageages.",
+        help="The output directory for generated images.",
     )
     parser.add_argument(
         "--checkpoint",
@@ -215,6 +240,38 @@ if __name__ == "__main__":
         type=str,
         help="The path to a model checkpoint",
     )
+    parser.add_argument(
+        "--do_overlay_maps_on_image",
+        action="store_true",
+        default=False,
+        help="Wether to output the input image overlayed with all found maps."
+    )
+    parser.add_argument(
+        "--do_mask_image_with_maps",
+        action="store_true",
+        default=False,
+        help="Wether to output all versions of the masked input image with predicted maps."
+    )
+    parser.add_argument(
+        "--do_mask_image_face",
+        action="store_true",
+        default=False,
+        help="Wether to output the input image masked with all found maps part of a face."
+    )
+    parser.add_argument(
+        "--do_mask_image_custom",
+        action="store_true",
+        default=False,
+        help="Wether to output the input image masked with all found and specified maps."
+    )
+    parser.add_argument(
+        "--map_ids",
+        nargs="+",
+        default=None,
+        type=int,
+        help="The ids of maps for custom image masking."
+    )
+    
 
     args = parser.parse_args()
 
