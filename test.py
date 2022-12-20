@@ -265,7 +265,7 @@ if __name__ == "__main__":
         help="Wether to output the input image masked with all found and specified maps."
     )
     parser.add_argument(
-        "--map_ids",
+        "--custom_maps",
         nargs="+",
         default=None,
         type=int,
