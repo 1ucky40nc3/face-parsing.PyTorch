@@ -201,11 +201,11 @@ def evaluate(
         for f in os.listdir(input_dir):
             path = os.path.join(input_dir, f)
             image = load_image(path)
-            image = transform(image)
-            image = torch.unsqueeze(image, 0)
-            image = image.cuda()
-            out = net(image)[0]
-            anno = out.squeeze(0).cpu().numpy().argmax(0)
+            x = transform(image)
+            x = torch.unsqueeze(x, 0)
+            x = x.cuda()
+            y = net(x)[0]
+            anno = y.squeeze(0).cpu().numpy().argmax(0)
 
             visualize_anno(
                 image,
