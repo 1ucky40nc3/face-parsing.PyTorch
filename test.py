@@ -135,7 +135,7 @@ def visualize_anno(
     do_mask_image_with_maps: bool = False,
     do_mask_image_face: bool = False,
     do_mask_image_custom: bool = False,
-    map_ids: Optional[List[int]] = None
+    custom_maps: Optional[List[int]] = None
 ) -> None:
     filename, _ = os.path.splitext(filename)
 
@@ -155,8 +155,8 @@ def visualize_anno(
         face_path = os.path.join(output_dir, f"{filename}-face.jpg")
         save_image(face_path, face_image)
     
-    if do_mask_image_custom:
-        face_image = mask_image_custom(image, anno, map_ids, stride)
+    if do_mask_image_custom and custom_maps is not None:
+        face_image = mask_image_custom(image, anno, custom_maps, stride)
         face_path = os.path.join(output_dir, f"{filename}-custom.jpg")
         save_image(face_path, face_image)
 
@@ -184,7 +184,7 @@ def evaluate(
     do_mask_image_with_maps: bool = False,
     do_mask_image_face: bool = False,
     do_mask_image_custom: bool = False,
-    map_ids: Optional[List[int]] = None
+    custom_maps: Optional[List[int]] = None
 ) -> None:
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -216,7 +216,7 @@ def evaluate(
                 do_mask_image_with_maps=do_mask_image_with_maps,
                 do_mask_image_face=do_mask_image_face,
                 do_mask_image_custom=do_mask_image_custom,
-                map_ids=map_ids
+                custom_maps=custom_maps
             )
 
 
