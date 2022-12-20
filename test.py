@@ -154,26 +154,32 @@ def eval_transform() -> transforms.Compose():
     )
 
 
+def load_image(path: str) -> Image:
+    image = Image.open(path)
+    image = image.resize((512, 512), image.BILINEAR)
+    return image
+
+
 def evaluate(
-    respth: str = "./res/test_res",
-    dspth: str = "./data",
-    cp: str = "model_final_diss.pth",
+    output_dir: str = "./res/test_res",
+    input_dir: str = "./data",
+    checkpoint: str = "model_final_diss.pth",
 ) -> None:
-    if not os.path.exists(respth):
-        os.makedirs(respth)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     n_classes = 19
     net = BiSeNet(n_classes=n_classes)
     net.cuda()
-    net.load_state_dict(torch.load(cp))
+    net.load_state_dict(torch.load(checkpoint))
     net.eval()
 
     transform = eval_transform()
 
     with torch.no_grad():
-        for image_path in os.listdir(dspth):
-            image = Image.open(os.path.join(dspth, image_path))
-            image = image.resize((512, 512), image.BILINEAR)
+        for f in os.listdir(input_dir):
+            path = os.path.join(input_dir, f)
+            image = load_image(path)
             image = transform(image)
             image = torch.unsqueeze(image, 0)
             image = image.cuda()
@@ -185,26 +191,26 @@ def evaluate(
                 anno,
                 stride=1,
                 save_image=True,
-                save_path=os.path.join(respth, image_path),
+                save_path=os.path.join(output_dir, path),
             )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dspth",
-        default="test-imageg/",
+        "--input_dir",
+        default="test-img/",
         type=str,
         help="The path to a directory with test imageages.",
     )
     parser.add_argument(
-        "--respth",
+        "--output_dir",
         default="res/test_res/",
         type=str,
         help="The output directory for generated imageages.",
     )
     parser.add_argument(
-        "--cp",
+        "--checkpoint",
         default="res/cp/79999_iter.pth",
         type=str,
         help="The path to a model checkpoint",
