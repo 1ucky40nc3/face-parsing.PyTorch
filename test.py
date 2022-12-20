@@ -49,7 +49,7 @@ FACE_CLASSES = [1, 2, 3, 4, 4, 5, 6, 10, 11, 12, 13]
 
 
 def save_image(path: str, image: Any) -> None:
-    cv2.imagewrite(path, image, [int(cv2.imageWRITE_JPEG_QUALITY), 100])
+    cv2.imwrite(path, image, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
 
 def overlay_maps_on_image(image: Image, anno: np.ndarray, stride: int) -> Any:
