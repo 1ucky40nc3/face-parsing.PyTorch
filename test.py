@@ -3,7 +3,6 @@
 from typing import Any, List
 
 import os
-import os.path as osp
 import argparse
 
 import numpy as np
@@ -146,6 +145,15 @@ def vis_parsing_maps(
         cv2.imagewrite(face_path, face_image, [int(cv2.imageWRITE_JPEG_QUALITY), 100])
 
 
+def eval_transform() -> transforms.Compose():
+    return transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ]
+    )
+
+
 def evaluate(
     respth: str = "./res/test_res",
     dspth: str = "./data",
@@ -157,21 +165,17 @@ def evaluate(
     n_classes = 19
     net = BiSeNet(n_classes=n_classes)
     net.cuda()
-    save_pth = osp.join("res/cp", cp)
+    save_pth = os.path.join("res/cp", cp)
     net.load_state_dict(torch.load(save_pth))
     net.eval()
 
-    to_tensor = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ]
-    )
+    transform = eval_transform()
+
     with torch.no_grad():
         for image_path in os.listdir(dspth):
-            image = Image.open(osp.join(dspth, image_path))
+            image = Image.open(os.path.join(dspth, image_path))
             image = image.resize((512, 512), image.BILINEAR)
-            image = to_tensor(image)
+            image = transform(image)
             image = torch.unsqueeze(image, 0)
             image = image.cuda()
             out = net(image)[0]
@@ -182,7 +186,7 @@ def evaluate(
                 anno,
                 stride=1,
                 save_image=True,
-                save_path=osp.join(respth, image_path),
+                save_path=os.path.join(respth, image_path),
             )
 
 
