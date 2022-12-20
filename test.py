@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
-from typing import Any
+from typing import Any, List
 
 import os
 import os.path as osp
@@ -46,8 +46,8 @@ PART_COLORS = [
 ]
 
 
-def overlay_maps_on_im(im: Image, anno: np.ndarray, stride: int) -> Any:
-    im = np.array(im).copy().astype(np.uint8)
+def overlay_maps_on_image(image: Image, anno: np.ndarray, stride: int) -> Any:
+    image = np.array(image).copy().astype(np.uint8)
     anno = anno.copy().astype(np.uint8)
     anno = cv2.resize(
         anno,
@@ -68,25 +68,82 @@ def overlay_maps_on_im(im: Image, anno: np.ndarray, stride: int) -> Any:
         anno_color[index[0], index[1], :] = PART_COLORS[pi]
 
     anno_color = anno_color.astype(np.uint8)
-    im = cv2.addWeighted(
-        cv2.cvtColor(im, cv2.COLOR_RGB2BGR), 0.4, anno_color, 0.6, 0
+    image = cv2.addWeighted(
+        cv2.cvtColor(image, cv2.COLOR_RGB2BGR), 0.4, anno_color, 0.6, 0
     )
 
-    return im
+    return image
+
+
+def mask_image_with_maps(image: Image, anno: np.ndarray, stride: int) -> List[Any]:
+    image = np.array(image).copy().astype(np.uint8)
+    anno = anno.copy().astype(np.uint8)
+    anno = cv2.resize(
+        anno,
+        None,
+        fx=stride,
+        fy=stride,
+        interpolation=cv2.INTER_NEAREST,
+    )
+    masked_images = []
+
+    n_classes = np.max(anno)
+
+    for i in range(1, n_classes + 1):
+        mask = anno[:, :, np.newaxis] != i
+        masked_image = np.where(mask, np.ones_like(image), image)
+        if masked_image.shape[0] > 0:
+            masked_image = cv2.cvtColor(masked_image, cv2.COLOR_BGR2RGB)
+            masked_images.append(masked_image)
+
+    return masked_images
+
+
+def mask_image_face(image: Image, anno: np.ndarray, stride: int) -> Any:
+    image = np.array(image).copy().astype(np.uint8)
+    anno = anno.copy().astype(np.uint8)
+    anno = cv2.resize(
+        anno,
+        None,
+        fx=stride,
+        fy=stride,
+        interpolation=cv2.INTER_NEAREST,
+    )
+
+    face_classes = [1, 2, 3, 4, 4, 5, 6, 10, 11, 12, 13]
+    mask = [anno[:, :, np.newaxis] == i for i in face_classes]
+    mask = np.logical_or.reduce(mask)
+    mask = np.invert(mask)
+    masked_image = np.where(mask, np.ones_like(image), image)
+    masked_image = cv2.cvtColor(masked_image, cv2.COLOR_BGR2RGB)
+
+    return masked_image
 
 
 def vis_parsing_maps(
-    im: Image,
-    parsing_anno: np.ndarray,
+    image: Image,
+    anno: np.ndarray,
     stride: int,
-    save_im: bool = False,
-    save_path: str = "vis_results/parsing_map_on_im.jpg",
+    save_image: bool = False,
+    save_path: str = "vis_results/parsing_map_on_image.jpg",
 ) -> None:
-    overlayed_on_im = overlay_maps_on_im(im, parsing_anno, stride)
+    overlayed_on_image = overlay_maps_on_image(image, anno, stride)
+    masked_images = mask_image_with_maps(image, anno, stride)
+    face_image = mask_image_face(image, anno, stride)
 
     # Save result or not
-    if save_im:
-        cv2.imwrite(save_path, overlayed_on_im, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
+    if save_image:
+        path, filename = os.path.split(save_path)
+        filename, _ = os.path.splitext(filename)
+
+        cv2.imagewrite(save_path, overlayed_on_image, [int(cv2.imageWRITE_JPEG_QUALITY), 100])
+        
+        for image in masked_images:
+            image_path = os.path.join(path, f"{filename}-mask.jpg")
+            cv2.imagewrite(image_path, image, [int(cv2.imageWRITE_JPEG_QUALITY), 100])
+        
+        face_path = os.path.join(path, f"{filename}-face.jpg")
+        cv2.imagewrite(face_path, face_image, [int(cv2.imageWRITE_JPEG_QUALITY), 100])
 
 
 def evaluate(
@@ -112,21 +169,19 @@ def evaluate(
     )
     with torch.no_grad():
         for image_path in os.listdir(dspth):
-            img = Image.open(osp.join(dspth, image_path))
-            image = img.resize((512, 512), Image.BILINEAR)
-            img = to_tensor(image)
-            img = torch.unsqueeze(img, 0)
-            img = img.cuda()
-            out = net(img)[0]
-            parsing = out.squeeze(0).cpu().numpy().argmax(0)
-            # print(parsing)
-            print(np.unique(parsing))
+            image = Image.open(osp.join(dspth, image_path))
+            image = image.resize((512, 512), image.BILINEAR)
+            image = to_tensor(image)
+            image = torch.unsqueeze(image, 0)
+            image = image.cuda()
+            out = net(image)[0]
+            anno = out.squeeze(0).cpu().numpy().argmax(0)
 
             vis_parsing_maps(
                 image,
-                parsing,
+                anno,
                 stride=1,
-                save_im=True,
+                save_image=True,
                 save_path=osp.join(respth, image_path),
             )
 
@@ -135,15 +190,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dspth",
-        default="test-img/",
+        default="test-imageg/",
         type=str,
-        help="The path to a directory with test images.",
+        help="The path to a directory with test imageages.",
     )
     parser.add_argument(
         "--respth",
         default="res/test_res/",
         type=str,
-        help="The output directory for generated images.",
+        help="The output directory for generated imageages.",
     )
     parser.add_argument(
         "--cp",
