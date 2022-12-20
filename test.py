@@ -16,12 +16,12 @@ from model import BiSeNet
 
 
 def vis_parsing_maps(
-    im,
-    parsing_anno,
-    stride,
-    save_im=False,
-    save_path="vis_results/parsing_map_on_im.jpg",
-):
+    im: Image,
+    parsing_anno: np.ndarray,
+    stride: int,
+    save_im: bool = False,
+    save_path: str = "vis_results/parsing_map_on_im.jpg",
+) -> None:
     # Colors for all 20 parts
     part_colors = [
         [255, 0, 0],  # skin
@@ -77,10 +77,12 @@ def vis_parsing_maps(
         cv2.imwrite(save_path[:-4] + ".png", vis_parsing_anno)
         cv2.imwrite(save_path, vis_im, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
-    # return vis_im
 
-
-def evaluate(respth="./res/test_res", dspth="./data", cp="model_final_diss.pth"):
+def evaluate(
+    respth: str = "./res/test_res",
+    dspth: str = "./data",
+    cp: str = "model_final_diss.pth",
+):
     if not os.path.exists(respth):
         os.makedirs(respth)
 
@@ -130,7 +132,7 @@ if __name__ == "__main__":
         "--respth",
         default="res/test_res/",
         type=str,
-        help="The output directory for generated images."
+        help="The output directory for generated images.",
     )
     parser.add_argument(
         "--cp",
