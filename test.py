@@ -1,17 +1,17 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
-
-from logger import setup_logger
-from model import BiSeNet
-
-import torch
-
 import os
 import os.path as osp
+
 import numpy as np
-from PIL import Image
-import torchvision.transforms as transforms
+
 import cv2
+from PIL import Image
+
+import torch
+import torchvision.transforms as transforms
+
+from model import BiSeNet
 
 
 def vis_parsing_maps(
@@ -80,7 +80,6 @@ def vis_parsing_maps(
 
 
 def evaluate(respth="./res/test_res", dspth="./data", cp="model_final_diss.pth"):
-
     if not os.path.exists(respth):
         os.makedirs(respth)
 
@@ -119,4 +118,5 @@ def evaluate(respth="./res/test_res", dspth="./data", cp="model_final_diss.pth")
 
 
 if __name__ == "__main__":
+
     evaluate(dspth="/home/zll/data/CelebAMask-HQ/test-img", cp="79999_iter.pth")
