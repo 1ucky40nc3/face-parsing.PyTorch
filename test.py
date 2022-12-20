@@ -11,7 +11,7 @@ import cv2
 from PIL import Image
 
 import torch
-import torchvision.transforms as transforms
+import torchvision.transforms as T
 
 from model import BiSeNet
 
@@ -161,11 +161,11 @@ def visualize_anno(
         save_image(face_path, face_image)
 
 
-def eval_transform() -> transforms.Compose():
-    return transforms.Compose(
+def eval_transforms() -> T.Compose:
+    return T.Compose(
         [
-            transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            T.ToTensor(),
+            T.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ]
     )
 
@@ -195,7 +195,7 @@ def evaluate(
     net.load_state_dict(torch.load(checkpoint))
     net.eval()
 
-    transform = eval_transform()
+    transform = eval_transforms()
 
     with torch.no_grad():
         for f in os.listdir(input_dir):
